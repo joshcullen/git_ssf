@@ -12,41 +12,41 @@ get.cumtime.8dir=function(coord1,mean.time,window1){
       seq1.y=(coord1['y']+1):final.coord
     }
     if (direction[i]=='do'){
-      final.coord=coord1['y']-20
+      final.coord=coord1['y']-window1
       seq1.x=rep(coord1['x'],window1)
       seq1.y=(coord1['y']-1):final.coord
     }    
     if (direction[i]=='ri'){
-      final.coord=coord1['x']+20
+      final.coord=coord1['x']+window1
       seq1.x=(coord1['x']+1):final.coord
       seq1.y=rep(coord1['y'],window1)
     }
     if (direction[i]=='le'){
-      final.coord=coord1['x']-20
+      final.coord=coord1['x']-window1
       seq1.x=(coord1['x']-1):final.coord
       seq1.y=rep(coord1['y'],window1)      
     }
     if (direction[i]=='ur'){
-      final.coord.y=coord1['y']+20
-      final.coord.x=coord1['x']+20
+      final.coord.y=coord1['y']+window1
+      final.coord.x=coord1['x']+window1
       seq1.y=(coord1['y']+1):final.coord.y
       seq1.x=(coord1['x']+1):final.coord.x
     }
     if (direction[i]=='ul'){
-      final.coord.y=coord1['y']+20
-      final.coord.x=coord1['x']-20
+      final.coord.y=coord1['y']+window1
+      final.coord.x=coord1['x']-window1
       seq1.y=(coord1['y']+1):final.coord.y
       seq1.x=(coord1['x']-1):final.coord.x
     }
     if (direction[i]=='lr'){
-      final.coord.y=coord1['y']-20
-      final.coord.x=coord1['x']+20
+      final.coord.y=coord1['y']-window1
+      final.coord.x=coord1['x']+window1
       seq1.y=(coord1['y']-1):final.coord.y
       seq1.x=(coord1['x']+1):final.coord.x
     }
     if (direction[i]=='ll'){
-      final.coord.y=coord1['y']-20
-      final.coord.x=coord1['x']-20
+      final.coord.y=coord1['y']-window1
+      final.coord.x=coord1['x']-window1
       seq1.y=(coord1['y']-1):final.coord.y
       seq1.x=(coord1['x']-1):final.coord.x
     }
@@ -62,3 +62,4 @@ get.cumtime.8dir=function(coord1,mean.time,window1){
   colnames(fim)=c('cum.time','x','y')
   fim
 }
+

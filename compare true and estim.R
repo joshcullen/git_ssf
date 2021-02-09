@@ -1,5 +1,5 @@
 plot(mod1$llk,type='l')
-seq1=100:length(mod1$llk)
+seq1=nburn:length(mod1$llk)
 plot(mod1$llk[seq1],type='l')
 
 par(mfrow=c(3,1))

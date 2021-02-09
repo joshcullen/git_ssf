@@ -1,19 +1,21 @@
-rm(list=ls())
-library('akima') #for linear interpolation
-library('data.table')
+
+library(akima) #for linear interpolation
+library(data.table)
+library(here)
+
+
 
 #get covariates
-setwd('U:\\GIT_models\\git_ssf\\fake data')
-source('aux functions.R')
+source(here('fake data', 'aux functions.R'))
 
-tmp=fread('fake data xmat.csv')
+tmp=fread(here('fake data', 'fake data xmat.csv'))
 xdim=1000
 ydim=1000
 ncov=3
 xmat=array(unlist(tmp),c(xdim,ydim,ncov))
 
 #get data
-coord=data.matrix(read.csv('fake data coord.csv',as.is=T))
+coord=data.matrix(read.csv(here('fake data', 'fake data coord.csv'),as.is=T))
 
 #parameters
 alpha=c(1,-1,0,0) #parameters for time model
@@ -32,6 +34,7 @@ window1=20
 ndados=((window1*2)+1)^2
 store.calc=matrix(NA,(nsim-1)*ndados,5+ncov)
 oooo=1
+
 for (i in 1:(nsim-1)){
   print(i)
   
@@ -71,10 +74,10 @@ for (i in 1:(nsim-1)){
   store.calc[seq1,]=cbind(res4,zeros,i)  
   oooo=oooo+ndados
 }
+
 colnames(store.calc)=c(colnames(res4),'selected','mov.id')
 
-setwd('U:\\GIT_models\\git_ssf\\fake data')
-write.csv(store.calc,'cumul_time and covs.csv',row.names=F)
+write.csv(store.calc, here('fake data', 'cumul_time and covs.csv'),row.names=F)
 
 #for this code to work, we need the x and y coordinates to function as indexes which can be used to subset the data
 

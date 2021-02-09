@@ -1,9 +1,11 @@
-rm(list=ls())
+
+library(akima) #for linear interpolation
+library(here)
+
 set.seed(1)
 
-setwd('U:\\GIT_models\\git_ssf\\fake data')
-source('aux functions.R')
-library('akima') #for linear interpolation
+source(here('fake data', 'aux functions.R'))
+
 
 #basic settings
 ncov=3
@@ -11,7 +13,7 @@ xdim=1000
 ydim=1000
 nloc=xdim*ydim
 xmat=array(runif(nloc*ncov,min=-1,max=1),dim=c(xdim,ydim,ncov))
-ind.loc=matrix(1:nloc,xdim,ydim)
+ind.loc=matrix(1:nloc,xdim,ydim)  #indexes from top to bottom, left to right
 
 #parameters
 alpha=c(1,-1,0,0) #parameters for time model
@@ -85,7 +87,6 @@ for (i in 1:(nsim-1)){
 plot(coord[,'x'],coord[,'y'],type='l')
 
 #save results
-setwd('U:\\GIT_models\\git_ssf\\fake data')
-write.csv(coord,'fake data coord.csv',row.names=F)
+write.csv(coord, here('fake data', 'fake data coord.csv'), row.names=F)
 xmat1=matrix(xmat,1,xdim*ydim*ncov)
-write.csv(xmat1,'fake data xmat.csv',row.names=F)
+write.csv(xmat1, here('fake data', 'fake data xmat.csv'), row.names=F)
