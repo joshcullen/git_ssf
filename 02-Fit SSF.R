@@ -1,9 +1,10 @@
 
 library(data.table)
 library(Rcpp)
-library(here)
 library(tictoc)
-library(raster)
+library(tidyverse)
+library(fishualize)
+library(coda)
 
 sourceCpp('aux1.cpp')
 source('ssf gibbs main function.R')
@@ -12,47 +13,153 @@ source('ssf gibbs functions.R')
 set.seed(123)
 
 
-dat=as.data.frame(fread('Giant Armadillo Time and Covs.csv'))
+#################
+### Load Data ###
+#################
 
+dat=as.data.frame(fread('Giant Armadillo Time and Covs trimmed.csv'))
 nomes=paste0('cov',1:2)
 xmat=data.matrix(dat[,nomes])
 
-#time model details
-time.int=4
-gamma.b=0.312  #mean from hierarchical JAGS model
+
+#################
+### Run Model ###
+#################
 
 #parameters for gibbs sampler
 ngibbs=1000
 nburn=ngibbs/2
 
 #get probability time
-time.prob=dgamma(time.int,gamma.b*dat$cum.time,gamma.b)
-log.time.prob=dgamma(time.int,gamma.b*dat$cum.time,gamma.b,log=T)
+time.prob=dat$time.prob
+log.time.prob=log(time.prob)
 
 tic()
-for (i in 1:length(unique(dat$mov.id))) {
-  print(i)
-  
-  ind<- which(dat$mov.id == i)
-  ind.u<- which(dat$mov.id == i & dat$selected == 1)
-  
-  cond<- which(time.prob[ind] < (time.prob[ind.u] * 0.01))
-  time.prob[ind[cond]]<- NA
-  log.time.prob[ind[cond]]<- NA
-}
-toc()  #takes 27 min to filter out low prob cells
+mod1=ssf_gibbs(dat=dat,ngibbs=ngibbs,nburn=nburn,xmat=xmat)
+toc()  #takes 19 min to run 1000 iterations
 
-res.grid <- raster(ncol=41,nrow=41, crs="+proj=utm +units=m")
-values(res.grid) <- time.prob[ind]
-plot(res.grid)
 
-ind<- which(is.na(time.prob))
-time.prob<- time.prob[-ind]
-log.time.prob<- log.time.prob[-ind]
-dat<- dat[-ind,]
-xmat<- xmat[-ind,]
+#######################
+### Inspect Results ###
+#######################
 
-tic()
-mod1=ssf_gibbs(time.int=time.int,gamma.b=gamma.b,dat=dat,ngibbs=ngibbs,nburn=nburn,xmat=xmat)
-toc()
+plot(mod1$llk,type='l')
+seq1=nburn:length(mod1$llk)
+plot(mod1$llk[seq1],type='l')
 
+par(mfrow=c(2,1))
+for (i in 1:2) plot(mod1$betas[,i],type='l')
+
+apply(mod1$betas,2,mean)
+
+
+### Make (pretty) caterpillar plot
+betas.post<- data.frame(mod1$betas)
+names(betas.post)<- c("green", "wet")
+betas<- betas.post %>% 
+  pivot_longer(., cols = c(green, wet), names_to = "coeff", values_to = "value") %>% 
+  group_by(coeff) %>% 
+  summarize(mean = mean(value)) %>% 
+  ungroup()
+hpdi<- as.mcmc(betas.post) %>% 
+  HPDinterval() %>% 
+  data.frame()
+betas<- cbind(betas, hpdi)
+
+
+ggplot(data=betas, aes(x=coeff, y=mean, ymin=lower, ymax=upper, color=coeff)) +
+  geom_hline(yintercept = 0) +
+  geom_errorbar(position = position_dodge(0.55), width = 0, size = 0.75) +
+  geom_point(position = position_dodge(0.55), size=2) +
+  scale_x_discrete(labels = c("Greenness", "Wetness")) +
+  scale_color_fish_d("", option = "Scarus_tricolor") +
+  coord_flip() +
+  theme_bw() +
+  labs(x="", y="") +
+  theme(axis.text = element_text(size = 14),
+        panel.grid = element_blank())
+
+
+##################################
+### Viz partial response plots ###
+##################################
+
+## Greenness
+
+#Generate sequence along green
+rango1<- dat %>% 
+  filter(selected == 1) %>% 
+  dplyr::select(cov1) %>% 
+  range()
+seq.green<- seq(rango1[1], rango1[2], length.out = 100)
+
+
+#Create design matrix where 0s added for all other vars besides green
+design.mat<- cbind(seq.green, 0)
+
+# Take cross-product of design matrix with betas and exponentiate to calc response
+y.mu<- exp(design.mat %*% betas$mean)  
+y.low<- exp(design.mat %*% betas$lower)
+y.up<- exp(design.mat %*% betas$upper)
+
+
+# Add results to data frame
+green.mu.df<- data.frame(x = seq.green,
+                     y = y.mu,
+                     ymin = y.low,
+                     ymax = y.up)
+
+
+# Plot relationship
+ggplot(data = green.mu.df) +
+  geom_ribbon(aes(x=x, ymin=ymin, ymax=ymax), fill = "forestgreen", alpha =  0.3) +
+  geom_line(aes(x, y), color = "forestgreen", size = 1) +
+  labs(x = "\nStandardized Greenness", y = "Habitat Preference\n") +
+  theme_bw() +
+  theme(axis.title = element_text(size = 16),
+        axis.text = element_text(size = 12))
+
+
+
+
+## Wetness
+
+#Generate sequence along wet
+rango1<- dat %>% 
+  filter(selected == 1) %>% 
+  dplyr::select(cov2) %>% 
+  range()
+seq.wet<- seq(rango1[1], rango1[2], length.out = 100)
+
+
+#Create design matrix where 0s added for all other vars besides wet
+design.mat<- cbind(0, seq.wet)
+
+# Take cross-product of design matrix with betas and exponentiate to calc response
+y.mu<- exp(design.mat %*% betas$mean)  #inverse logit
+y.low<- exp(design.mat %*% betas$lower)
+y.up<- exp(design.mat %*% betas$upper)
+
+
+# Add results to data frame
+wet.mu.df<- data.frame(x = seq.wet,
+                         y = y.mu,
+                         ymin = y.low,
+                         ymax = y.up)
+
+
+# Plot relationship
+ggplot(data = wet.mu.df) +
+  geom_ribbon(aes(x=x, ymin=ymin, ymax=ymax), fill = "cadetblue", alpha =  0.3) +
+  geom_line(aes(x, y), color = "cadetblue", size = 1) +
+  labs(x = "\nStandardized Wetness", y = "Habitat Preference\n") +
+  theme_bw() +
+  theme(axis.title = element_text(size = 16),
+        axis.text = element_text(size = 12))
+
+
+######################
+### Export Results ###
+######################
+
+# write.csv(betas, "SSF coefficients.csv", row.names = F)
