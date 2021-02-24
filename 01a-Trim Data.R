@@ -30,4 +30,4 @@ dat2$cov2=(dat2$cov2-mean(dat2$cov2))/sd(dat2$cov2)
 
 #export
 ind=which(colnames(dat2)%in%c('x','y','cum.time','time.prob.sel'))
-write.csv(dat2[,-ind],'Giant Armadillo Time and Covs trimmed.csv',row.names=F)
+# write.csv(dat2[,-ind],'Giant Armadillo Time and Covs trimmed.csv',row.names=F)

@@ -16,23 +16,37 @@ dat<-  dat %>%
   rename(x = easting, y = northing)
 dat$month<- month.abb[month(dat$date)]
 dat$month<- factor(dat$month, levels = month.abb[c(5:12,1)])
-dat$season<- ifelse(dat$month %in% c(month.abb[3:5]), "Fall",
-                    ifelse(dat$month %in% c(month.abb[6:8]), "Winter",
-                           ifelse(dat$month %in% c(month.abb[9:11]), "Spring", "Summer")))
-dat$season<- factor(dat$season, levels = c("Fall","Winter","Spring","Summer"))
+dat$season<- ifelse(dat$month %in% month.abb[1:7], "Flood", "Dry")
 
 
 # Load environ covars
-green<- brick('GiantArm_tcgreen_season.grd')
-wet<- brick('GiantArm_tcwet_season.grd')
+setwd("~/Documents/Snail Kite Project/Data/R Scripts/ValleLabUF/resist_avg")
+
+ndvi<- brick('GiantArm_ndvi_monthly.grd')
+season.ind<- ifelse(names(ndvi) %in% month.abb[1:7], "Flood", "Dry")
+ndvi.season<- stackApply(ndvi, season.ind, fun = mean)
+names(ndvi.season)<- c("Flood","Dry")
+ndvi.season<- crop(ndvi.season, extent(dat %>% 
+                                        summarize(xmin = min(x) - 3000,
+                                                  xmax = max(x) + 3000,
+                                                  ymin = min(y) - 3000,
+                                                  ymax = max(y) + 3000) %>% 
+                                        unlist()))
+
+ndwi<- brick('GiantArm_ndwi_monthly.grd')
+season.ind<- ifelse(names(ndwi) %in% month.abb[1:7], "Flood", "Dry")
+ndwi.season<- stackApply(ndwi, season.ind, fun = mean)
+names(ndwi.season)<- c("Flood","Dry")
+ndwi.season<- crop(ndwi.season, ndvi.season)
+
 
 # Extract cell numbers from coordinates
-cell.num<- cellFromXY(green[[1]], dat[,c("x","y")])
+cell.num<- cellFromXY(ndvi.season[[1]], dat[,c("x","y")])
 
 # Store seasonal values for each covar in an array
-xmat<- array(NA, dim = c(dim(green)[1:2], 2, nlayers(green)))
-for (i in 1:nlayers(green)) {
-  covs<- stack(green[[i]], wet[[i]])
+xmat<- array(NA, dim = c(dim(ndvi.season)[1:2], 2, nlayers(ndvi.season)))
+for (i in 1:nlayers(ndvi.season)) {
+  covs<- stack(ndvi.season[[i]], ndwi.season[[i]])
   xmat[,,,i]<- as.array(covs)
 }
 
@@ -44,12 +58,10 @@ ncov=dim(xmat)[3]
 
 
 # Load resistance model results
-setwd("~/Documents/Snail Kite Project/Data/R Scripts/ValleLabUF/resist_avg")
-
 resist<- read.csv('Giant Armadillo Resistance summary results.csv', as.is = T)
 
-mean.time.all<- green
-values(mean.time.all)<- resist$time  #store all estimates
+mean.time.all<- ndvi.season
+values(mean.time.all)<- resist$time[1:(2*ncell(ndvi.season))]  #store all estimates; FIX LATER AFTER RE-RUNNING RESISTANCE MODEL W 2 SEASONS (AKA DONT INDEX HALF OF DATA)
 mean.time<- as.array(mean.time.all)  #reduce for single season and convert to matrix
 
 
@@ -59,14 +71,14 @@ window1=20
 ndados=((window1*2)+1)^2
 store.calc=matrix(NA,(nsim-1)*ndados,5+ncov)
 oooo=1
-seasons<- names(green)
+seasons<- names(ndvi.season)
 
 
-for (i in 1:(nsim-1)){  #extracts covar values per month; ISSUE FOR SUMMER LOCS WHERE SOME PROBABILITIES AND COVARS ARE NA, WHICH CAUSES INTERPOLATION TO FAIL
+for (i in 1:(nsim-1)){  #extracts covar values per season
   print(i)
   
   #convert cell number to row and col coords
-  coord<- as.vector(rowColFromCell(green[[1]], cell.num[i]))
+  coord<- as.vector(rowColFromCell(ndvi.season[[1]], cell.num[i]))
   names(coord)<- c("y","x")  #y=row,  x=column
   cond<- which(seasons %in% dat$season[i])
   

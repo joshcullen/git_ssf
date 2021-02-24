@@ -55,9 +55,9 @@ apply(mod1$betas,2,mean)
 
 ### Make (pretty) caterpillar plot
 betas.post<- data.frame(mod1$betas)
-names(betas.post)<- c("green", "wet")
+names(betas.post)<- c("ndvi", "ndwi")
 betas<- betas.post %>% 
-  pivot_longer(., cols = c(green, wet), names_to = "coeff", values_to = "value") %>% 
+  pivot_longer(., cols = c(ndvi, ndwi), names_to = "coeff", values_to = "value") %>% 
   group_by(coeff) %>% 
   summarize(mean = mean(value)) %>% 
   ungroup()
@@ -71,7 +71,7 @@ ggplot(data=betas, aes(x=coeff, y=mean, ymin=lower, ymax=upper, color=coeff)) +
   geom_hline(yintercept = 0) +
   geom_errorbar(position = position_dodge(0.55), width = 0, size = 0.75) +
   geom_point(position = position_dodge(0.55), size=2) +
-  scale_x_discrete(labels = c("Greenness", "Wetness")) +
+  scale_x_discrete(labels = c("NDVI", "NDWI")) +
   scale_color_fish_d("", option = "Scarus_tricolor") +
   coord_flip() +
   theme_bw() +
@@ -84,18 +84,18 @@ ggplot(data=betas, aes(x=coeff, y=mean, ymin=lower, ymax=upper, color=coeff)) +
 ### Viz partial response plots ###
 ##################################
 
-## Greenness
+## NDVI
 
 #Generate sequence along green
 rango1<- dat %>% 
   filter(selected == 1) %>% 
   dplyr::select(cov1) %>% 
   range()
-seq.green<- seq(rango1[1], rango1[2], length.out = 100)
+seq.ndvi<- seq(rango1[1], rango1[2], length.out = 100)
 
 
 #Create design matrix where 0s added for all other vars besides green
-design.mat<- cbind(seq.green, 0)
+design.mat<- cbind(seq.ndvi, 0)
 
 # Take cross-product of design matrix with betas and exponentiate to calc response
 y.mu<- exp(design.mat %*% betas$mean)  
@@ -104,17 +104,17 @@ y.up<- exp(design.mat %*% betas$upper)
 
 
 # Add results to data frame
-green.mu.df<- data.frame(x = seq.green,
+ndvi.mu.df<- data.frame(x = seq.ndvi,
                      y = y.mu,
                      ymin = y.low,
                      ymax = y.up)
 
 
 # Plot relationship
-ggplot(data = green.mu.df) +
+ggplot(data = ndvi.mu.df) +
   geom_ribbon(aes(x=x, ymin=ymin, ymax=ymax), fill = "forestgreen", alpha =  0.3) +
   geom_line(aes(x, y), color = "forestgreen", size = 1) +
-  labs(x = "\nStandardized Greenness", y = "Habitat Preference\n") +
+  labs(x = "\nStandardized NDVI", y = "Habitat Preference\n") +
   theme_bw() +
   theme(axis.title = element_text(size = 16),
         axis.text = element_text(size = 12))
@@ -122,18 +122,18 @@ ggplot(data = green.mu.df) +
 
 
 
-## Wetness
+## NDWI
 
 #Generate sequence along wet
 rango1<- dat %>% 
   filter(selected == 1) %>% 
   dplyr::select(cov2) %>% 
   range()
-seq.wet<- seq(rango1[1], rango1[2], length.out = 100)
+seq.ndwi<- seq(rango1[1], rango1[2], length.out = 100)
 
 
-#Create design matrix where 0s added for all other vars besides wet
-design.mat<- cbind(0, seq.wet)
+#Create design matrix where 0s added for all other vars besides ndwi
+design.mat<- cbind(0, seq.ndwi)
 
 # Take cross-product of design matrix with betas and exponentiate to calc response
 y.mu<- exp(design.mat %*% betas$mean)  #inverse logit
@@ -142,14 +142,14 @@ y.up<- exp(design.mat %*% betas$upper)
 
 
 # Add results to data frame
-wet.mu.df<- data.frame(x = seq.wet,
+ndwi.mu.df<- data.frame(x = seq.ndwi,
                          y = y.mu,
                          ymin = y.low,
                          ymax = y.up)
 
 
 # Plot relationship
-ggplot(data = wet.mu.df) +
+ggplot(data = ndwi.mu.df) +
   geom_ribbon(aes(x=x, ymin=ymin, ymax=ymax), fill = "cadetblue", alpha =  0.3) +
   geom_line(aes(x, y), color = "cadetblue", size = 1) +
   labs(x = "\nStandardized Wetness", y = "Habitat Preference\n") +
