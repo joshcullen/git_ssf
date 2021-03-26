@@ -56,6 +56,8 @@ ncov=dim(xmat)[3]
 setwd("~/Documents/Snail Kite Project/Data/R Scripts/ValleLabUF/resist")
 
 resist<- read.csv('Giant Armadillo Resistance Surfaces.csv', as.is = T)
+resist<- resist %>% 
+  filter(type == "Mean")
 resist1<- pivot_wider(resist, id_cols = c(x,y), names_from = month, values_from = time)
 mean.time.all<- rasterFromXYZ(resist1)
 mean.time<- as.array(mean.time.all)  #reduce for single season and convert to matrix
@@ -65,7 +67,7 @@ mean.time<- as.array(mean.time.all)  #reduce for single season and convert to ma
 nsim=length(cell.num)
 window1=15
 ndados=((window1*2)+1)^2
-store.calc=matrix(NA,(nsim-1)*ndados,5+ncov)
+store.calc=matrix(NA,(nsim-1)*ndados,6+ncov)
 oooo=1
 months1<- names(evi.s)
 
@@ -111,12 +113,12 @@ for (i in 1:(nsim-1)){  #extracts covar values per season
   zeros[ind]=1
   
   seq1=oooo:(oooo+ndados-1)
-  store.calc[seq1,]=cbind(res4,zeros,i)  
+  store.calc[seq1,]=cbind(res4,zeros,i,dat.em$date[i])  
   oooo=oooo+ndados
 }
 
 
-colnames(store.calc)=c(colnames(res4),'selected','mov.id')
+colnames(store.calc)=c(colnames(res4),'selected','mov.id','date')
 
 
 # Export data

@@ -12,18 +12,24 @@ dat<-  dat %>%
   rename(x = easting, y = northing)
 dat$month<- month.abb[month(dat$date)]
 dat$month<- factor(dat$month, levels = month.abb[c(5:12,1)])
-dat$season<- ifelse(dat$month %in% c(month.abb[3:5]), "Fall",
-                    ifelse(dat$month %in% c(month.abb[6:8]), "Winter",
-                           ifelse(dat$month %in% c(month.abb[9:11]), "Spring", "Summer")))
-dat$season<- factor(dat$season, levels = c("Fall","Winter","Spring","Summer"))
+
+dat.em<- dat %>% 
+  filter(id == "emanuel")
 
 
-green<- brick('GiantArm_tcgreen_season.grd')
-wet<- brick('GiantArm_tcwet_season.grd')
+#load EVI data
+setwd("~/Documents/Snail Kite Project/Data/R Scripts/ValleLabUF/resist_avg")
 
-# scaled covars
-green_s<- scale(green)
-wet_s<- scale(wet)
+evi<- brick('GiantArm_evi_monthly.grd')
+evi<- crop(evi, extent(dat.em %>% 
+                         summarize(xmin = min(x) - 3000,
+                                   xmax = max(x) + 3000,
+                                   ymin = min(y) - 3000,
+                                   ymax = max(y) + 3000) %>% 
+                         unlist()))
+evi[getValues(evi) > 1 | getValues(evi) < -1]<- NA  #mask pixels where values are outside of accepted range
+evi<- evi[[which(names(evi) %in% unique(dat.em$month))]]
+evi.s<- scale(evi)
 
 
 # Load beta coefficients from model
@@ -36,17 +42,17 @@ betas<- read.csv("SSF coefficients.csv", as.is = T)
 
 ### Calculate SSF Surface ###
 
-ssfSurf<- vector("list", 4)
-names(ssfSurf)<- names(green_s)
+ssfSurf<- vector("list", 5)
+names(ssfSurf)<- names(evi.s)
 
-for (j in 1:nlayers(green_s)) {
-  print(names(green_s)[j])
+for (j in 1:nlayers(evi.s)) {
+  print(names(evi.s)[j])
   
   #create matrix of covars
-  cov.mat<- cbind(green = raster::values(green_s[[j]]), wet = raster::values(wet_s[[j]]))
+  cov.mat<- cbind(evi = raster::values(evi.s[[j]]))
   
   #calc habitat preference
-  ssf.res<- green[[1]]
+  ssf.res<- evi.s[[1]]
   w.hat<- exp(cov.mat %*% betas$mean)
   raster::values(ssf.res)<- w.hat/(1 + w.hat)
   
@@ -59,14 +65,14 @@ for (j in 1:nlayers(green_s)) {
 }
 
 
-ssfSurf.df<- bind_rows(ssfSurf, .id = "season")
-ssfSurf.df$season<- factor(ssfSurf.df$season, levels = unique(ssfSurf.df$season))
+ssfSurf.df<- bind_rows(ssfSurf, .id = "month")
+ssfSurf.df$month<- factor(ssfSurf.df$month, levels = unique(ssfSurf.df$month))
 
 
 # Plot seasonal predictive surfaces
 ggplot() +
   geom_raster(data = ssfSurf.df, aes(x, y, fill = sel)) +
-  geom_path(data = dat, aes(x, y, group = id), alpha = 0.75, color = "chartreuse") +
+  geom_path(data = dat.em, aes(x, y, group = id), alpha = 0.75, color = "chartreuse") +
   scale_fill_viridis_c("Selection", option = "inferno",
                        na.value = "transparent", limits = c(0,1)) +
   scale_x_continuous(expand = c(0,0)) +
@@ -82,5 +88,5 @@ ggplot() +
         legend.title = element_text(size = 14),
         legend.text = element_text(size = 12)) +
   guides(fill = guide_colourbar(barwidth = 30, barheight = 1)) +
-  facet_wrap( ~ season, nrow = 2)
+  facet_wrap( ~ month)
   

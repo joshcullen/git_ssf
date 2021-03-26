@@ -1,4 +1,5 @@
 library(data.table)
+library(tidyverse)
 library(tictoc)
 library(raster)
 
@@ -33,8 +34,29 @@ dat2=dat1[cond,]; dim(dat1); dim(dat2); mean(cond)
 # dat2$cov1=(dat2$cov1-mean(dat2$cov1))/sd(dat2$cov1)
 # dat2$cov2=(dat2$cov2-mean(dat2$cov2))/sd(dat2$cov2)
 
+
+### Viz probability surface per step
+#1031 total steps
+sel<- dat2 %>%  #plot points for true steps
+  filter(mov.id %in% 120:132) %>% 
+  filter(selected == 1)
+sel$mov.id<- sel$mov.id - 1
+
+ggplot() +
+  geom_tile(data = dat2 %>% filter(mov.id %in% 120:131), aes(x, y, fill = time.prob)) +
+  scale_fill_viridis_c() +
+  geom_path(data = sel[,-1], aes(x, y), col = "grey50") +
+  geom_point(data = sel[,-1], aes(x, y), col = "grey50", shape = 1) +
+  geom_point(data = sel[-1,], aes(x, y), col = "red", size = 2) +
+  theme_bw() +
+  facet_wrap(~mov.id)
+
+
+
+
 #export
 setwd("~/Documents/Snail Kite Project/Data/R Scripts/git_ssf")
 
 ind=which(colnames(dat2)%in%c('x','y','cum.time','time.prob.sel'))
 # write.csv(dat2[,-ind],'Giant Armadillo Time and Covs trimmed.csv',row.names=F)
+

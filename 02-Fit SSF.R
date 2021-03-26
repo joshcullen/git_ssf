@@ -19,19 +19,28 @@ set.seed(123)
 #################
 
 dat=as.data.frame(fread('Giant Armadillo Time and Covs trimmed.csv'))
+dat$month<- month.abb[month(dat$date)]
+dat$month<- factor(dat$month, levels = unique(dat$month))
 
 # Add B-spline (w/ 2 internal knots) for 'EVI'
-# rango<- range(dat$cov1)
-# knot.locs<- seq(rango[1], rango[2], length.out = 4)[2:3]
-# spline.evi<- as.data.frame(bs(dat$cov1, degree=2, intercept = FALSE,
-#                               knots = knot.locs))
-# names(spline.evi)<- paste("spline", 1:ncol(spline.evi), sep = ".")
-# dat<- cbind(dat, spline.evi)
+rango<- range(dat$cov1)
+knot.locs<- seq(rango[1], rango[2], length.out = 4)[2:3]
+spline.evi<- as.data.frame(bs(dat$cov1, degree=2, intercept = TRUE,
+                              knots = knot.locs))
+names(spline.evi)<- paste("spline", 1:ncol(spline.evi), sep = ".")
+dat<- cbind(dat, spline.evi)
+
+#create dummy variable for month
+month.dumm<- model.matrix(~dat$month + 0)
+ 
+
+ind<- c(paste("spline", 1:ncol(spline.evi), sep = "."))
+# ind<- "cov1"
+# xmat=data.matrix(dat[,ind])
+xmat<- data.matrix(cbind(month.dumm[,-1], dat[,ind]))  #treat May as ref
+colnames(xmat)[1:4]<- c("Jun","Sep","Oct","Nov")
 
 
-# ind<- c(paste("spline", 1:ncol(spline.evi), sep = "."))
-ind<- "cov1"
-xmat=data.matrix(dat[,ind])
 
 #################
 ### Run Model ###
@@ -47,7 +56,7 @@ log.time.prob=log(time.prob)
 
 tic()
 mod1=ssf_gibbs(dat=dat,ngibbs=ngibbs,nburn=nburn,xmat=xmat)
-toc()  #takes 3.5 min to run 5000 iterations
+toc()  #takes 50 min to run 5000 iterations
 
 
 #######################
@@ -58,9 +67,9 @@ plot(mod1$llk,type='l')
 seq1=nburn:length(mod1$llk)
 plot(mod1$llk[seq1],type='l')
 
-# par(mfrow=c(2,2))
-# for (i in 1:ncol(mod1$betas)) plot(mod1$betas[,i],type='l')
-plot(mod1$betas, type = "l")
+par(mfrow=c(2,2))
+for (i in 1:ncol(mod1$betas)) plot(mod1$betas[,i],type='l')
+# plot(mod1$betas, type = "l")
 
 # apply(mod1$betas,2,mean)
 mean(mod1$betas)
