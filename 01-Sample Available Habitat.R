@@ -65,7 +65,7 @@ mean.time<- as.array(mean.time.all)  #reduce for single season and convert to ma
 
 #important variables
 nsim=length(cell.num)
-window1=15
+window1=17
 ndados=((window1*2)+1)^2
 store.calc=matrix(NA,(nsim-1)*ndados,6+ncov)
 oooo=1

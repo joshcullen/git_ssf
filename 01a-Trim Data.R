@@ -52,6 +52,25 @@ ggplot() +
   facet_wrap(~mov.id)
 
 
+## How many selected steps fall beyond the trimmed probability surface of 'available' habitat?
+
+oo<- 0  #counter
+ind<- integer()
+for (i in 2:length(which(dat2$selected == 1))) {
+  avail<- dat2 %>% 
+    filter(mov.id == (i - 1) & selected == 0)
+  used<- dat2 %>% 
+    filter(mov.id == i & selected == 1)
+  
+  if (any(avail$x == used$x & avail$y == used$y) == FALSE) {
+    oo<- oo + 1
+    ind<- c(ind, i)
+  }
+}
+
+## percentage of points that don't overlap probability surface
+oo/(length(which(dat2$selected == 1)) - 1)  #8.6% don't overlap
+
 
 
 #export

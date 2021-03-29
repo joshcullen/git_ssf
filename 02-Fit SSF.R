@@ -25,7 +25,7 @@ dat$month<- factor(dat$month, levels = unique(dat$month))
 # Add B-spline (w/ 2 internal knots) for 'EVI'
 rango<- range(dat$cov1)
 knot.locs<- seq(rango[1], rango[2], length.out = 4)[2:3]
-spline.evi<- as.data.frame(bs(dat$cov1, degree=2, intercept = TRUE,
+spline.evi<- as.data.frame(bs(dat$cov1, degree=2, intercept = FALSE,
                               knots = knot.locs))
 names(spline.evi)<- paste("spline", 1:ncol(spline.evi), sep = ".")
 dat<- cbind(dat, spline.evi)
