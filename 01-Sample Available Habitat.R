@@ -20,6 +20,12 @@ dat$month<- factor(dat$month, levels = month.abb[c(5:12,1)])
 dat.em<- dat %>% 
   filter(id == "emanuel")
 
+#calculate time steps
+dat.em$dt<- difftime(dat.em$date, dplyr::lag(dat.em$date, 1), units = "min") %>%
+  as.numeric() %>%
+  round(., 2)
+dat.em$dt<- c(dat.em$dt[-1], NA)
+
 
 # Load environ covars
 setwd("~/Documents/Snail Kite Project/Data/R Scripts/ValleLabUF/resist_avg")
@@ -68,7 +74,7 @@ nsim=length(cell.num)
 window1=17
 ndados=((window1*2)+1)^2
 store.calc=matrix(NA,(nsim-1)*ndados,6+ncov)
-oooo=1
+oooo=jjjj=1
 months1<- names(evi.s)
 
 
@@ -76,24 +82,28 @@ for (i in 1:(nsim-1)){  #extracts covar values per season
   print(i)
   
   #convert cell number to row and col coords
-  coord<- as.vector(rowColFromCell(evi.s[[1]], cell.num[i]))
-  names(coord)<- c("y","x")  #y=row,  x=column
+  coord<- c(rowColFromCell(evi.s[[1]], cell.num[i]), dat.em$dt[i])
+  names(coord)<- c("y","x","dt")  #y=row,  x=column
   cond<- which(months1 %in% dat.em$month[i])
   
   #calculate cumulative time across 8 directions
-  res=get.cumtime.8dir(coord1=coord,mean.time=mean.time[,,cond],window1=window1)
+  res=get.cumtime.8dir(coord1=coord[1:2],mean.time=mean.time[,,cond],window1=window1)
   
   #calculate prob of staying in the sample place
-  tmp=matrix(coord,1,2)
+  tmp=matrix(coord[1:2],1,2)
   tempo.not.move=mean.time[tmp[1], tmp[2], cond]
   res1=rbind(res,c(tempo.not.move,coord[c('x','y')]))
   
-  #interpolate cumulative time across a window1 x window1 area
-  minx=coord['x']-window1; maxx=coord['x']+window1
-  miny=coord['y']-window1; maxy=coord['y']+window1
-  res2 = interp(x=res1[,'x'],y=res1[,'y'],z=res1[,'cum.time'],
-                xo = minx:maxx, yo = miny:maxy, 
-                linear=T, extrap = F)
+  # #if no NA in covariates and 6 <= dt <=8 min, interpolate cumulative time across a window1 x window1 area
+  cond.not.na=sum(is.na(res1[,'cum.time']))==0
+  cond.time.int=coord['dt']>=6 & coord['dt']<=8
+  if (cond.not.na & cond.time.int){
+    #interpolate cumulative time across a window1 x window1 area
+    minx=coord['x']-window1; maxx=coord['x']+window1
+    miny=coord['y']-window1; maxy=coord['y']+window1
+    res2 = interp(x=res1[,'x'],y=res1[,'y'],z=res1[,'cum.time'],
+                  xo = minx:maxx, yo = miny:maxy, 
+                  linear=T, extrap = F)
   res3=interp2xyz(res2)
   colnames(res3)[3]='cum.time'
   
@@ -107,21 +117,27 @@ for (i in 1:(nsim-1)){  #extracts covar values per season
   colnames(aux)=paste0('cov',1:ncov)
   res4=cbind(res3,aux)
   
-  #store results  
+  #store results
   ind=which(res4[,'x']==coord['x'] & res4[,'y']==coord['y'])
   zeros=rep(0,nrow(res4))
   zeros[ind]=1
-  
+
   seq1=oooo:(oooo+ndados-1)
-  store.calc[seq1,]=cbind(res4,zeros,i,dat.em$date[i])  
+  store.calc[seq1,]=cbind(res4,zeros,jjjj,dat.em$date[i])
+  jjjj=jjjj+1
   oooo=oooo+ndados
+  }
 }
 
 
 colnames(store.calc)=c(colnames(res4),'selected','mov.id','date')
 
+#eliminate rows with NA because did not fill the entire matrix
+cond=!is.na(store.calc[,'mov.id'])
+store.calc1=store.calc[cond,]
+
 
 # Export data
 setwd("~/Documents/Snail Kite Project/Data/R Scripts/git_ssf")
 
-# write.csv(store.calc, 'Giant Armadillo Time and Covs.csv', row.names=F)
+# write.csv(store.calc1, 'Giant Armadillo Time and Covs.csv', row.names=F)

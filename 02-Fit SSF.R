@@ -30,6 +30,11 @@ spline.evi<- as.data.frame(bs(dat$cov1, degree=2, intercept = FALSE,
 names(spline.evi)<- paste("spline", 1:ncol(spline.evi), sep = ".")
 dat<- cbind(dat, spline.evi)
 
+#what proportion of rows have sums < 1?
+foo<- rowSums(spline.evi)
+length(which(foo < 1))/length(foo)  #9.97%
+length(which(foo < 0.95))/length(foo)  #0.39%
+
 #create dummy variable for month
 month.dumm<- model.matrix(~dat$month + 0)
  
@@ -47,7 +52,7 @@ colnames(xmat)[1:4]<- c("Jun","Sep","Oct","Nov")
 #################
 
 #parameters for gibbs sampler
-ngibbs=5000
+ngibbs=2000
 nburn=ngibbs/2
 
 #get probability time

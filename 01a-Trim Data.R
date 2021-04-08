@@ -1,3 +1,4 @@
+
 library(data.table)
 library(tidyverse)
 library(tictoc)
@@ -36,14 +37,14 @@ dat2=dat1[cond,]; dim(dat1); dim(dat2); mean(cond)
 
 
 ### Viz probability surface per step
-#1031 total steps
+#726 total steps
 sel<- dat2 %>%  #plot points for true steps
-  filter(mov.id %in% 120:132) %>% 
+  filter(mov.id %in% 134:145) %>% 
   filter(selected == 1)
 sel$mov.id<- sel$mov.id - 1
 
 ggplot() +
-  geom_tile(data = dat2 %>% filter(mov.id %in% 120:131), aes(x, y, fill = time.prob)) +
+  geom_tile(data = dat2 %>% filter(mov.id %in% 134:145), aes(x, y, fill = time.prob)) +
   scale_fill_viridis_c() +
   geom_path(data = sel[,-1], aes(x, y), col = "grey50") +
   geom_point(data = sel[,-1], aes(x, y), col = "grey50", shape = 1) +
@@ -58,7 +59,7 @@ oo<- 0  #counter
 ind<- integer()
 for (i in 2:length(which(dat2$selected == 1))) {
   avail<- dat2 %>% 
-    filter(mov.id == (i - 1) & selected == 0)
+    filter(mov.id == (i - 1))
   used<- dat2 %>% 
     filter(mov.id == i & selected == 1)
   
@@ -76,6 +77,6 @@ oo/(length(which(dat2$selected == 1)) - 1)  #8.6% don't overlap
 #export
 setwd("~/Documents/Snail Kite Project/Data/R Scripts/git_ssf")
 
-ind=which(colnames(dat2)%in%c('x','y','cum.time','time.prob.sel'))
+ind=which(colnames(dat2) %in% c('x','y','cum.time','time.prob.sel'))
 # write.csv(dat2[,-ind],'Giant Armadillo Time and Covs trimmed.csv',row.names=F)
 
